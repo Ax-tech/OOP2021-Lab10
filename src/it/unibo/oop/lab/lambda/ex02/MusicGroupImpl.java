@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -31,42 +32,106 @@ public final class MusicGroupImpl implements MusicGroup {
 
     @Override
     public Stream<String> orderedSongNames() {
-        return null;
+        return this.songs.stream().map(x -> x.getSongName()).sorted();
     }
 
     @Override
     public Stream<String> albumNames() {
-        return null;
+        return this.albums.keySet().stream();
     }
 
     @Override
     public Stream<String> albumInYear(final int year) {
-        return null;
+        return this.albums.entrySet().stream().filter(x -> x.getValue() == year).map(x -> x.getKey());
     }
 
     @Override
     public int countSongs(final String albumName) {
-        return -1;
+        if (!this.albums.containsKey(albumName)) {
+            throw new IllegalArgumentException("invalid album name");
+        }
+        return (int) this.songs.stream()
+                .filter(s -> s.getAlbumName().isPresent())
+                .filter(s -> s.getAlbumName().equals(Optional.of(albumName)))
+                .count();
+        /**
+         * Standard implementation (without stream and lambda's)
+         */
+//        int count = 0;
+//        for (final Song song : songs) {
+//            if (song.getAlbumName().equals(Optional.of(albumName))) {
+//              count++;
+//            }
+//        }
+//        return count;
     }
 
     @Override
     public int countSongsInNoAlbum() {
-        return -1;
+        return (int) this.songs.stream()
+                .filter(s -> s.getAlbumName().isEmpty())
+                .count();
+        /**
+         * Standard implementation (without stream and lambda's)
+         */
+//        int count = 0;
+//        for (final Song song : songs) {
+//            if (song.getAlbumName().equals(Optional.empty())) {
+//              count++;
+//            }
+//        }
+//        return count;
     }
 
     @Override
     public OptionalDouble averageDurationOfSongs(final String albumName) {
-        return null;
+        if (!this.albums.containsKey(albumName)) {
+            throw new IllegalArgumentException("invalid album name");
+        }
+        return this.songs.stream()
+                .filter(s -> s.getAlbumName().isPresent())
+                .filter(s -> s.getAlbumName().equals(Optional.of(albumName)))
+                .mapToDouble(s -> s.getDuration())
+                .average();
+        /**
+         * Standard implementation (without stream and lambda's)
+         */
+//        double average = 0;
+//        double count = 0;
+//        for (final Song song : songs) {
+//            if (song.getAlbumName().equals(Optional.of(albumName))) {
+//                average += song.getDuration();
+//                count++;
+//              }
+//            }
+//        average = average / count;
+//        return OptionalDouble.of(average);
     }
 
     @Override
     public Optional<String> longestSong() {
-        return null;
+        return this.songs.stream()
+                .collect(Collectors.maxBy((x, y) -> Double.compare(x.getDuration(), y.getDuration())))
+                .map(s -> s.getSongName());
+        /**
+         * Standard implementation (without stream and lambda's)
+         */
+//        Song longest = new Song(null, null, 0);
+//        for (final Song song : songs) {
+//            if (song.getDuration() > longest.getDuration()) {
+//              longest = song;
+//            }
+//        }
+//        return Optional.of(longest.getSongName());
     }
 
     @Override
     public Optional<String> longestAlbum() {
-        return null;
+        return this.songs.stream().filter(a -> a.getAlbumName().isPresent())
+                .collect(Collectors.groupingBy(Song::getAlbumName, Collectors.summingDouble(Song::getDuration)))
+                .entrySet().stream()
+                .collect(Collectors.maxBy((x, y) -> Double.compare(x.getValue(), y.getValue())))
+                .flatMap(e -> e.getKey());
     }
 
     private static final class Song {
